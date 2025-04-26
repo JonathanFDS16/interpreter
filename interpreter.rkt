@@ -732,7 +732,7 @@
           (error "no 'main' function found!")))))
 
 
-
+(provide interpret parser)
 ;; interpret ofc
 (define interpret
   (lambda (code)
@@ -741,12 +741,5 @@
                          (lambda (state) (error "you can't use 'continue' just anywhere!") state)
                          (lambda (state) (error "you can't use 'throw' just anywhere!") state)))))
 
-
-
-
-
 ; change this to the name of your .txt file!
-(interpret (parser "code.txt"))
-
-
-
+; (interpret (parser "code.txt"))
