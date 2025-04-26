@@ -5,7 +5,7 @@
 
 #lang racket
 
-(require "functionParser.rkt")
+(require "classParser.rkt")
 (require "lex.rkt")
 
 
