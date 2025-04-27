@@ -845,6 +845,8 @@
 
 
 ;; interpret ofc
+(provide interpret)
+(provide parser)
 (define interpret
   (lambda (code classname)
     (run-class (eval-sequence code '(()()()())
@@ -853,12 +855,8 @@
                          (lambda (state) (error "you can't use 'throw' just anywhere!") state)) classname)))
 
 
-
-
-
-
 ; change this to the name of your .txt file!
-(interpret (parser "code.txt") 'A)
+(interpret (parser "test/test5A.txt") 'A)
 
 
 
