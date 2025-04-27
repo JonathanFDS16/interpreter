@@ -144,6 +144,7 @@
       ((null? frame) #f)
       ;; if the structure is a pair and the first element is the variable, return the rest of the list
       ((and (pair? frame) (symbol? (car frame)))
+      (printf "lookup-helper found variable: ~a\n" (car frame))
        (if (eq? (car frame) var)
            (if (eq? (cdr frame) #f)
                'false
@@ -161,12 +162,16 @@
 ;; main function to look up a variable in the state
 (define lookup-var
   (lambda (var state)
+    (printf "Looking var: ~a\n" var)
     (cond
       ((let ((v (lookup-helper var (get-local-frame state))))
+         (printf "Looked in local-frame and the result is: ~a\n" v)
          (if v (list v 'l) #f)))
       ((let ((v (lookup-helper var (get-class-frame state))))
+         (printf "Looked in class-frame and the result is: ~a\n" v)
          (if v (list v 'c) #f)))
       ((let ((v (lookup-helper var (get-global-frame state))))
+         (printf "Looked in global-frame and the result is: ~a\n" v)
          (if v (list v 'g) #f)))
       (else #f))))
 
@@ -184,6 +189,7 @@
 ;; function to declare a variable
 (define declare-var
   (lambda (var value state)
+    (printf "Declaring var: ~a\n Value: ~a\n" var value)
     (let ((real-state (get-local-frame state)))
       (if (eq? var 'return)  ;; special case for 'return' variable
           (list (append (get-global-frame state) (list (cons var value))) (get-class-frame state) (get-local-frame state) (get-prev-frame state))
@@ -199,6 +205,7 @@
 ;; declare all variables in a parameter - value pair of lists
 (define declare-all-vars
   (lambda (values params state break cont throw)
+    (printf "Declaring-all-vars Values: ~a\n" values)
     (if (not (= (length values) (length params)))
         (error "mismatch between number of values and parameters!")
         (if (null? params)
@@ -214,12 +221,14 @@
 ;; evaluate the parameters (yay)
 (define eval-parameters
   (lambda (params state break cont throw)
+    (printf "Evaluating params: ~a\n" params)
     (map (lambda (param) (eval-value-expr param state break cont throw)) params)))
 
 
 
 (define replace-inst-var
   (lambda (var new-val frame)
+    (printf "Replace inst var: ~a with new value: ~a\n" var new-val)
     (cond
       ;; base case: empty frame returns empty list
       ((null? frame) '())
@@ -239,6 +248,7 @@
 ; helper to update key-value pair in a flat list of bindings
 (define replace-var
   (lambda (var new-val frame)
+    (printf "Replace var: ~a with value: ~a\n" var new-val)
     (if (not (lookup-helper var frame))
         frame
         (cond
@@ -259,6 +269,7 @@
 ;; main function to update var and return full state
 (define update
   (lambda (var new-val state)
+    (printf "Updating var: ~a" var)
     (let ((result (if (list? var)
                (list (lookup-helper (caddr var) (get-class-frame state)) 'c)
                (lookup-var var state)))
@@ -303,6 +314,7 @@
 ;; add a layer to the current state!
 (define add-layer
   (lambda (state)
+    (printf "Adding layer to state")
     (let ((real-state (get-local-frame state)))
       (list (get-global-frame state) (cons '() real-state) (get-prev-frame state)))))
 
@@ -340,6 +352,7 @@
 ;; remove a variable (most always return)
 (define remove-var
   (lambda (var state)
+    (printf "Removing var: ~a\n" var)
     (list (remove-helper var (get-global-frame state)) (get-class-frame state) (get-local-frame state) (get-prev-frame state))))
 
 
@@ -352,7 +365,6 @@
 ;; evaluate a mathematical expression
 (define eval-value-math
   (lambda (expr state break cont throw)
-
     (cond
       ;;  check if the expr is a symbol and not declared (undefined)
       ((symbol? expr)
@@ -446,6 +458,7 @@
 ;; evaluate an expression
 (define eval-value-expr
   (lambda (expr state break cont throw)
+    (printf "Eval-value-expr: ~a\n" expr)
     (cond
       ;; numbers and true/false
       ((number? expr) expr)
@@ -498,6 +511,7 @@
 
       ;; new object
       ((eq? (get-operand expr) 'new)
+       (printf "Instantiating object with new")
        (get-local-frame (eval-sequence (get-lookup-value (lookup-var (cadr expr) state)) '(() () () ()) break cont throw)))
 
       ((eq? (get-operand expr) 'dot)
@@ -609,7 +623,8 @@
 ;; evaluate a function call
 (define eval-func
   (lambda (stmt state break cont throw)
-    (let* ((name         (get-func-name stmt))
+    (printf "Eval-func stmt: ~a\n" stmt)
+    (let* ((name         (get-func-name stmt)) ;cadr
            (args         (if (> (length stmt) 2)
                              (eval-parameters (cddr stmt) state break cont throw)
                              '()))
@@ -626,6 +641,7 @@
                                               (list (get-global-frame state) (get-class-frame state) '() (cons (get-local-frame state) (get-prev-frame state)))
                                               break cont throw))
                            ((equal? loc 'c)
+                            (printf "creating new-state: \nname: ~a args: ~a func-and-loc: ~a params: ~a boby: ~a\n" name args func-and-loc params body)
                             (if (list? name)
                                 (declare-all-vars args params
                                                   (list (get-global-frame state) (get-lookup-value (lookup-var (cadr name) state)) '() (list (get-class-frame state) (get-local-frame state) (get-prev-frame state)))
@@ -704,6 +720,7 @@
 ;; add a function declaration to the state + environment
 (define eval-function-declaration
   (lambda (stmt state break cont throw)
+    (printf "Func Declaration: ~a\n" stmt)
     (let ((name (get-func-name stmt))
           (params (get-params stmt))
           (body (get-func-body stmt)))
@@ -728,7 +745,7 @@
 ;; evaluate a statement (this is the main function)
 (define eval-stmt
   (lambda (stmt state break cont throw)
-
+    (printf "Eval-Stmt: ~a\n" stmt)
     (let ((control-flow (get-flow stmt)))  ;; use get-flow to determine the flow type
       (cond
         ;; base case: empty statement list
